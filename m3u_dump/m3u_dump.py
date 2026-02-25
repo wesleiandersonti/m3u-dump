@@ -132,16 +132,32 @@ class M3uDump:
             self.report['origin_links'].append(item)
             self.report['url_origin_saved'] += 1
 
-    def fix_playlist(self, search_path_files, playlist_lines):
+    def fix_playlist(self_or_search_path_files, search_path_files_or_playlist_lines, playlist_lines=None):
+        """Backward compatible:
+        - legacy static usage: M3uDump.fix_playlist(search_path_files, playlist_lines)
+        - instance usage: self.fix_playlist(search_path_files, playlist_lines)
+        """
+        if playlist_lines is None:
+            # legacy static call style
+            self = None
+            search_path_files = self_or_search_path_files
+            playlist_lines = search_path_files_or_playlist_lines
+            strategy = 'path-score'
+            report = None
+        else:
+            self = self_or_search_path_files
+            search_path_files = search_path_files_or_playlist_lines
+            strategy = self.args.get('collision_strategy', 'path-score')
+            report = self.report
+
         new_playlist_lines = []
-        strategy = self.args.get('collision_strategy', 'path-score')
 
         for line in playlist_lines:
             if M3uDump.is_comment(line):
                 new_playlist_lines.append(line)
                 continue
 
-            if self.is_url(line):
+            if M3uDump.is_url(line):
                 new_playlist_lines.append(line)
                 continue
 
@@ -153,72 +169,102 @@ class M3uDump:
             roots = search_path_files.get(basename, [])
 
             if roots:
-                if len(roots) > 1:
-                    self.report['collisions_resolved'] += 1
+                if report is not None and len(roots) > 1:
+                    report['collisions_resolved'] += 1
                 fixed_path = M3uDump.choose_candidate_path(line, roots, basename, strategy)
                 new_playlist_lines.append(fixed_path)
-                self.report['fixed_paths'] += 1
-                if len(roots) > 1:
-                    self.report['details'].append({
-                        'type': 'collision',
-                        'basename': basename,
-                        'strategy': strategy,
-                        'candidates': [os.path.join(root, basename) for root in roots],
-                        'selected': fixed_path,
-                    })
+                if report is not None:
+                    report['fixed_paths'] += 1
+                    if len(roots) > 1:
+                        report['details'].append({
+                            'type': 'collision',
+                            'basename': basename,
+                            'strategy': strategy,
+                            'candidates': [os.path.join(root, basename) for root in roots],
+                            'selected': fixed_path,
+                        })
             else:
                 log.warning('skip dump, because music file of {0} was not found in search path.'.format(basename))
-                self.report['unresolved_paths'] += 1
+                if report is not None:
+                    report['unresolved_paths'] += 1
                 if new_playlist_lines and M3uDump.is_comment(new_playlist_lines[-1]):
                     new_playlist_lines.pop()
 
         return new_playlist_lines
 
-    def _materialize(self, src, dst):
-        mode = self.args.get('link_mode', 'copy')
+    @staticmethod
+    def _materialize(src, dst, mode='copy', report=None):
         if mode == 'copy':
             shutil.copyfile(src, dst)
-            self.report['copied'] += 1
+            if report is not None:
+                report['copied'] += 1
             return 'copied'
 
         if mode == 'hardlink':
             os.link(src, dst)
-            self.report['linked'] += 1
+            if report is not None:
+                report['linked'] += 1
             return 'hardlink'
 
         if mode == 'symlink':
             os.symlink(src, dst)
-            self.report['linked'] += 1
+            if report is not None:
+                report['linked'] += 1
             return 'symlink'
 
         shutil.copyfile(src, dst)
-        self.report['copied'] += 1
+        if report is not None:
+            report['copied'] += 1
         return 'copied'
 
-    def copy_music(self, playlist_lines, dump_music_path, dry_run):
+    def copy_music(self_or_playlist_lines, playlist_lines_or_dump_music_path, dump_music_path_or_dry_run, dry_run=None):
+        """Backward compatible:
+        - legacy static usage: M3uDump.copy_music(playlist_lines, dump_music_path, dry_run)
+        - instance usage: self.copy_music(playlist_lines, dump_music_path, dry_run)
+        """
+        if dry_run is None:
+            # legacy static call style
+            playlist_lines = self_or_playlist_lines
+            dump_music_path = playlist_lines_or_dump_music_path
+            dry_run = dump_music_path_or_dry_run
+            skip_existing = False
+            link_mode = 'copy'
+            report = None
+        else:
+            self = self_or_playlist_lines
+            playlist_lines = playlist_lines_or_dump_music_path
+            dump_music_path = dump_music_path_or_dry_run
+            skip_existing = self.args.get('skip_existing', True)
+            link_mode = self.args.get('link_mode', 'copy')
+            report = self.report
+
         for line in playlist_lines:
-            if M3uDump.is_comment(line) or self.is_url(line):
+            if M3uDump.is_comment(line) or M3uDump.is_url(line):
                 continue
             if not os.path.exists(line):
                 log.warning('skip copy, because music file({}) was not found.'.format(line))
-                self.report['copy_skipped_missing'] += 1
+                if report is not None:
+                    report['copy_skipped_missing'] += 1
                 continue
 
             dst = os.path.join(dump_music_path, os.path.basename(line))
 
-            if self.args.get('skip_existing', True) and os.path.exists(dst):
+            if skip_existing and os.path.exists(dst):
                 log.info('skip existing {0}'.format(dst))
-                self.report['copy_skipped_existing'] += 1
-                self.report['details'].append({'type': 'skip_existing', 'src': line, 'dst': dst})
+                if report is not None:
+                    report['copy_skipped_existing'] += 1
+                    report['details'].append({'type': 'skip_existing', 'src': line, 'dst': dst})
                 continue
 
             if not dry_run:
-                action = self._materialize(line, dst)
+                action = M3uDump._materialize(line, dst, mode=link_mode, report=report)
                 log.info('{0} {1} -> {2}'.format(action, line, dst))
-                self.report['details'].append({'type': action, 'src': line, 'dst': dst})
+                if report is not None:
+                    report['details'].append({'type': action, 'src': line, 'dst': dst})
             else:
                 log.info('(dryrun)copying {0} -> {1}'.format(line, dst))
-                self.report['details'].append({'type': 'dryrun', 'src': line, 'dst': dst})
+                if report is not None:
+                    report['details'].append({'type': 'dryrun', 'src': line, 'dst': dst})
 
     @staticmethod
     def save_playlist(playlist_name, playlist_lines, dump_music_path, dry_run):
