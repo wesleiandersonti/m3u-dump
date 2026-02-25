@@ -39,7 +39,17 @@ class M3uDump:
     @staticmethod
     def setup_logging():
         module_path = os.path.abspath(os.path.dirname(__file__))
-        logging.config.fileConfig(os.path.join(module_path, 'logging.conf'))
+        cfg_path = os.path.join(module_path, 'logging.conf')
+
+        if os.path.exists(cfg_path):
+            logging.config.fileConfig(cfg_path)
+            return
+
+        # Fallback para build PyInstaller/ambientes sem logging.conf
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        )
 
     @staticmethod
     def parse_playlist(playlist_path):
