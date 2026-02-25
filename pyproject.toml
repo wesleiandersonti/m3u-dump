@@ -31,6 +31,7 @@ classifiers = [
 
 [project.scripts]
 m3u-dump = "m3u_dump.cli:main"
+m3u-dump-gui = "m3u_dump.gui:main"
 
 [tool.setuptools]
 include-package-data = true

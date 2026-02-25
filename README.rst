@@ -38,6 +38,24 @@ Exemplo com múltiplos padrões + relatórios + hardlink:
     --report-json ./report.json \
     --report-csv ./report.csv
 
+APP WINDOWS (GUI)
+-----------------
+
+Rodar interface gráfica:
+
+.. code-block:: bash
+
+  m3u-dump-gui
+
+Build EXE no Windows:
+
+.. code-block:: powershell
+
+  .\build_windows.ps1
+
+Saída esperada:
+- ``dist\\m3u-dump-pro.exe``
+
 DESENVOLVIMENTO
 ---------------
 
