@@ -19,12 +19,18 @@ OPÇÕES IMPORTANTES
 - ``--with-playlist / --no-with-playlist``: grava (ou não) a playlist corrigida no destino
 - ``--fix-search-path <dir>``: tenta corrigir caminhos quebrados por basename
 - ``--playlist-pattern-list <glob>``: pode repetir para múltiplos padrões
+- ``--collision-strategy [first|shortest|path-score]``: resolve arquivos com mesmo nome em múltiplas pastas
+- ``--report-json <arquivo.json>``: gera relatório da execução
 
-Exemplo com múltiplos padrões:
+Exemplo com múltiplos padrões + relatório JSON:
 
 .. code-block:: bash
 
-  m3u-dump ./playlists ./out --playlist-pattern-list "*.m3u" --playlist-pattern-list "*.m3u8"
+  m3u-dump ./playlists ./out \
+    --playlist-pattern-list "*.m3u" \
+    --playlist-pattern-list "*.m3u8" \
+    --collision-strategy path-score \
+    --report-json ./report.json
 
 DESENVOLVIMENTO
 ---------------

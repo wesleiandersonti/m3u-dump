@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import fnmatch
+import json
 import logging
 import logging.config
 import os
@@ -14,6 +15,16 @@ class M3uDump:
     def __init__(self, args):
         self.args = args
         self.setup_logging()
+        self.report = {
+            'playlists_processed': 0,
+            'copied': 0,
+            'copy_skipped_missing': 0,
+            'fixed_paths': 0,
+            'unresolved_paths': 0,
+            'collisions_resolved': 0,
+            'collision_strategy': self.args.get('collision_strategy', 'path-score'),
+            'details': [],
+        }
         log.info('\n' + pp.pformat(self.args))
 
     @staticmethod
@@ -41,8 +52,34 @@ class M3uDump:
         return line.lstrip().startswith('#EXTINF') or line.lstrip().startswith('#EXTM3U')
 
     @staticmethod
-    def fix_playlist(search_path_files, playlist_lines):
+    def _path_score(original_line, candidate_root):
+        # higher is better
+        original_parts = set(part.lower() for part in os.path.normpath(original_line).split(os.sep) if part)
+        candidate_parts = set(part.lower() for part in os.path.normpath(candidate_root).split(os.sep) if part)
+        return len(original_parts.intersection(candidate_parts))
+
+    @staticmethod
+    def choose_candidate_path(original_line, roots, basename, strategy='path-score'):
+        if not roots:
+            return None
+
+        if strategy == 'first':
+            selected_root = roots[0]
+        elif strategy == 'shortest':
+            selected_root = min(roots, key=lambda r: len(os.path.normpath(r).split(os.sep)))
+        else:  # path-score
+            ranked = sorted(
+                roots,
+                key=lambda r: (M3uDump._path_score(original_line, r), -len(os.path.normpath(r).split(os.sep))),
+                reverse=True,
+            )
+            selected_root = ranked[0]
+
+        return os.path.join(selected_root, basename)
+
+    def fix_playlist(self, search_path_files, playlist_lines):
         new_playlist_lines = []
+        strategy = self.args.get('collision_strategy', 'path-score')
 
         for line in playlist_lines:
             if M3uDump.is_comment(line):
@@ -54,26 +91,39 @@ class M3uDump:
                 continue
 
             basename = os.path.basename(line)
-            if basename in search_path_files:
-                fixed_path = os.path.join(search_path_files[basename][0], basename)
+            roots = search_path_files.get(basename, [])
+
+            if roots:
+                if len(roots) > 1:
+                    self.report['collisions_resolved'] += 1
+                fixed_path = M3uDump.choose_candidate_path(line, roots, basename, strategy)
                 new_playlist_lines.append(fixed_path)
+                self.report['fixed_paths'] += 1
+                if len(roots) > 1:
+                    self.report['details'].append({
+                        'type': 'collision',
+                        'basename': basename,
+                        'strategy': strategy,
+                        'candidates': [os.path.join(root, basename) for root in roots],
+                        'selected': fixed_path,
+                    })
             else:
                 log.warning(
                     'skip dump, because music file of {0} was not found in search path.'.format(basename)
                 )
-                # remove previous comment pair when applicable
+                self.report['unresolved_paths'] += 1
                 if new_playlist_lines and M3uDump.is_comment(new_playlist_lines[-1]):
                     new_playlist_lines.pop()
 
         return new_playlist_lines
 
-    @staticmethod
-    def copy_music(playlist_lines, dump_music_path, dry_run):
+    def copy_music(self, playlist_lines, dump_music_path, dry_run):
         for line in playlist_lines:
             if M3uDump.is_comment(line):
                 continue
             if not os.path.exists(line):
                 log.warning('skip copy, because music file({}) was not found.'.format(line))
+                self.report['copy_skipped_missing'] += 1
                 continue
 
             dst = os.path.join(dump_music_path, os.path.basename(line))
@@ -82,6 +132,7 @@ class M3uDump:
                 shutil.copyfile(line, dst)
             else:
                 log.info('(dryrun)copying {0} -> {1}'.format(line, dst))
+            self.report['copied'] += 1
 
     @staticmethod
     def save_playlist(playlist_name, playlist_lines, dump_music_path, dry_run):
@@ -107,9 +158,9 @@ class M3uDump:
 
         if self.args.get('fix_search_path'):
             search_path_files = M3uDump.get_search_path_files(self.args['fix_search_path'])
-            playlist_lines = M3uDump.fix_playlist(search_path_files, playlist_lines)
+            playlist_lines = self.fix_playlist(search_path_files, playlist_lines)
 
-        M3uDump.copy_music(playlist_lines, self.args['dump_music_path'], self.args['dry_run'])
+        self.copy_music(playlist_lines, self.args['dump_music_path'], self.args['dry_run'])
 
         if self.args.get('with_playlist', True):
             playlist_name = os.path.basename(playlist_path)
@@ -119,6 +170,8 @@ class M3uDump:
                 self.args['dump_music_path'],
                 self.args['dry_run'],
             )
+
+        self.report['playlists_processed'] += 1
 
     @staticmethod
     def load_from_playlist_path(load_m3u_path, pattern_list):
@@ -132,6 +185,14 @@ class M3uDump:
                     path_list.append(os.path.join(root, filename))
         return sorted(path_list)
 
+    def write_report(self):
+        report_path = self.args.get('report_json')
+        if not report_path:
+            return
+        with open(report_path, 'w', encoding='utf-8') as f:
+            json.dump(self.report, f, ensure_ascii=False, indent=2)
+        log.info('report written: {}'.format(report_path))
+
     def start(self):
         log.debug('start -----')
 
@@ -144,4 +205,6 @@ class M3uDump:
         log.info('playlist is {}'.format(paths))
         for path in paths:
             self.dump_playlist(path)
+
+        self.write_report()
         log.info('copy done.')

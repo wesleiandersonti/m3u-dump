@@ -17,6 +17,18 @@ from m3u_dump.m3u_dump import M3uDump
     default=('*.m3u', '*.m3u8'),
     help='Playlist filename pattern (repeat option to add multiple values)',
 )
+@click.option(
+    '--collision-strategy',
+    type=click.Choice(['first', 'shortest', 'path-score']),
+    default='path-score',
+    show_default=True,
+    help='How to resolve duplicate filenames found in fix-search-path',
+)
+@click.option(
+    '--report-json',
+    default=None,
+    help='Write execution report to a JSON file',
+)
 def main(**kwargs):
     """Console script for m3u_dump."""
 
