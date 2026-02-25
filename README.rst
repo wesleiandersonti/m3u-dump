@@ -50,6 +50,11 @@ Rodar interface gráfica:
 
   m3u-dump-gui
 
+Atualizador integrado (GUI):
+- botão ``Verificar atualização``
+- consulta ``update.json`` no GitHub
+- abre o link do instalador mais recente
+
 Build EXE no Windows:
 
 .. code-block:: powershell

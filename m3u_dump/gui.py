@@ -3,10 +3,13 @@ import json
 import os
 import threading
 import tkinter as tk
+import webbrowser
 from tkinter import filedialog, messagebox
 from tkinter import ttk
 
+from m3u_dump import __version__
 from m3u_dump.m3u_dump import M3uDump
+from m3u_dump.updater import check_for_update
 
 
 class App(tk.Tk):
@@ -70,6 +73,7 @@ class App(tk.Tk):
         self.btn_run.pack(side='left')
         ttk.Button(bar, text='Salvar preset', command=self.save_preset).pack(side='left', padx=8)
         ttk.Button(bar, text='Carregar preset', command=self.load_preset).pack(side='left')
+        ttk.Button(bar, text='Verificar atualização', command=self.check_updates).pack(side='left', padx=8)
 
         self.progress = ttk.Progressbar(root, mode='indeterminate')
         self.progress.pack(fill='x', pady=(0, 8))
@@ -165,6 +169,31 @@ class App(tk.Tk):
     def _finish_run(self):
         self.progress.stop()
         self.btn_run.configure(state='normal')
+
+    def check_updates(self):
+        self.append_log('Verificando atualização...')
+        result = check_for_update(__version__)
+
+        if not result.get('ok'):
+            self.append_log(f"Falha ao verificar atualização: {result.get('error', 'erro desconhecido')}")
+            messagebox.showwarning('Atualização', 'Não foi possível verificar atualização agora.')
+            return
+
+        if result.get('has_update'):
+            msg = (
+                f"Nova versão disponível: {result.get('remote_version')}\n"
+                f"Versão atual: {result.get('current_version')}\n\n"
+                f"{result.get('notes', '')}\n\n"
+                "Deseja abrir a página de download?"
+            )
+            self.append_log(f"Atualização disponível: {result.get('remote_version')}")
+            if messagebox.askyesno('Atualização disponível', msg):
+                url = result.get('installer_url') or result.get('release_url')
+                if url:
+                    webbrowser.open(url)
+        else:
+            self.append_log('Você já está na versão mais recente.')
+            messagebox.showinfo('Atualização', 'Você já está na versão mais recente.')
 
     def save_preset(self):
         path = filedialog.asksaveasfilename(defaultextension='.json', filetypes=[('JSON', '*.json')])

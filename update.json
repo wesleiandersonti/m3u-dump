@@ -1,0 +1,6 @@
+{
+  "version": "1.1.2",
+  "notes": "Correções no EXE + captura de origem de links + verificador de atualização",
+  "release_url": "https://github.com/wesleiandersonti/m3u-dump/releases/latest",
+  "installer_url": "https://github.com/wesleiandersonti/m3u-dump/releases/latest/download/m3u-dump-pro-installer.exe"
+}
