@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "m3u-dump"
+version = "1.0.1"
+description = "Tool to dump music playlist and music files listed in playlists"
+readme = "README.rst"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Shuuhei Tateya", email = "stateya@gmail.com" }
+]
+dependencies = [
+  "click>=8.1"
+]
+keywords = ["m3u", "playlist", "music", "cli"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13"
+]
+
+[project.scripts]
+m3u-dump = "m3u_dump.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["m3u_dump*"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

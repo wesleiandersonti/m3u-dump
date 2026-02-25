@@ -63,6 +63,6 @@ target/
 venv/
 log-m3u-dump.log.*
 .doit.db.*
-.idea/workspace.xml
+.idea/
 m3u-dump.iws
 dictionaries/*

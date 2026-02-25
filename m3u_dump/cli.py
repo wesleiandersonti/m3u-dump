@@ -9,11 +9,16 @@ from m3u_dump.m3u_dump import M3uDump
 @click.argument('load-m3u-path', type=click.Path(exists=True))
 @click.argument('dump-music-path')
 @click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
-@click.option('--with-playlist/--no-with-playlist', default=True, help='too copy fixed playlist')
-@click.option('--fix-search-path', default=None, help='fix search path')
-@click.option('--playlist-pattern-list', default=['*.m3u', '*.m3u8'])
+@click.option('--with-playlist/--no-with-playlist', default=True, help='Copy fixed playlist')
+@click.option('--fix-search-path', default=None, help='Fix search path')
+@click.option(
+    '--playlist-pattern-list',
+    multiple=True,
+    default=('*.m3u', '*.m3u8'),
+    help='Playlist filename pattern (repeat option to add multiple values)',
+)
 def main(**kwargs):
-    """Console script for m3u_dump"""
+    """Console script for m3u_dump."""
 
     click.echo(click.style('=' * 53, fg='green'))
     click.echo(click.style('   Welcome m3u-dump!!', fg='green'))
@@ -23,6 +28,7 @@ def main(**kwargs):
 
     click.echo()
     click.echo(click.style('copy was completed(successful!).'))
+
 
 if __name__ == "__main__":
     main()
