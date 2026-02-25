@@ -56,6 +56,16 @@ Build EXE no Windows:
 Saída esperada:
 - ``dist\\m3u-dump-pro.exe``
 
+Gerar instalador (Inno Setup):
+
+1. Instale o Inno Setup no Windows
+2. Abra o script:
+   ``installer\\m3u-dump-pro.iss``
+3. Compile (Build)
+
+Saída esperada do instalador:
+- ``installer\\m3u-dump-pro-installer.exe``
+
 DESENVOLVIMENTO
 ---------------
 
