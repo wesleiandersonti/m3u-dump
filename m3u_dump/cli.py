@@ -24,15 +24,18 @@ from m3u_dump.m3u_dump import M3uDump
     show_default=True,
     help='How to resolve duplicate filenames found in fix-search-path',
 )
+@click.option('--report-json', default=None, help='Write execution report to a JSON file')
+@click.option('--report-csv', default=None, help='Write execution details to a CSV file')
 @click.option(
-    '--report-json',
+    '--origin-links-file',
     default=None,
-    help='Write execution report to a JSON file',
+    help='Write detected origin servers/links from URL entries to CSV',
 )
 @click.option(
-    '--report-csv',
-    default=None,
-    help='Write execution details to a CSV file',
+    '--resolve-url-final/--no-resolve-url-final',
+    default=True,
+    show_default=True,
+    help='Resolve final URL after redirects before saving origin server',
 )
 @click.option(
     '--skip-existing/--no-skip-existing',

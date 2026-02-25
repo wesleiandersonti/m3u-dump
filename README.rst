@@ -22,10 +22,12 @@ OPÇÕES IMPORTANTES
 - ``--collision-strategy [first|shortest|path-score]``: resolve arquivos com mesmo nome em múltiplas pastas
 - ``--report-json <arquivo.json>``: gera relatório da execução
 - ``--report-csv <arquivo.csv>``: exporta detalhes da execução em CSV
+- ``--origin-links-file <arquivo.csv>``: salva URL original, URL final e servidor de origem
+- ``--resolve-url-final / --no-resolve-url-final``: resolve redirecionamentos antes de salvar
 - ``--skip-existing / --no-skip-existing``: pula arquivos já existentes no destino
 - ``--link-mode [copy|hardlink|symlink]``: modo de materialização no destino
 
-Exemplo com múltiplos padrões + relatórios + hardlink:
+Exemplo com múltiplos padrões + relatórios + origem dos links:
 
 .. code-block:: bash
 
@@ -36,7 +38,8 @@ Exemplo com múltiplos padrões + relatórios + hardlink:
     --skip-existing \
     --link-mode hardlink \
     --report-json ./report.json \
-    --report-csv ./report.csv
+    --report-csv ./report.csv \
+    --origin-links-file ./origens.csv
 
 APP WINDOWS (GUI)
 -----------------

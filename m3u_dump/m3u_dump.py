@@ -7,6 +7,8 @@ import logging.config
 import os
 import pprint
 import shutil
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 pp = pprint.PrettyPrinter(indent=4)
 log = logging.getLogger(__name__)
@@ -25,9 +27,12 @@ class M3uDump:
             'fixed_paths': 0,
             'unresolved_paths': 0,
             'collisions_resolved': 0,
+            'url_entries_detected': 0,
+            'url_origin_saved': 0,
             'collision_strategy': self.args.get('collision_strategy', 'path-score'),
             'link_mode': self.args.get('link_mode', 'copy'),
             'details': [],
+            'origin_links': [],
         }
         log.info('\n' + pp.pformat(self.args))
 
@@ -56,6 +61,10 @@ class M3uDump:
         return line.lstrip().startswith('#EXTINF') or line.lstrip().startswith('#EXTM3U')
 
     @staticmethod
+    def is_url(line):
+        return line.lower().startswith('http://') or line.lower().startswith('https://')
+
+    @staticmethod
     def _path_score(original_line, candidate_root):
         original_parts = set(part.lower() for part in os.path.normpath(original_line).split(os.sep) if part)
         candidate_parts = set(part.lower() for part in os.path.normpath(candidate_root).split(os.sep) if part)
@@ -80,12 +89,49 @@ class M3uDump:
 
         return os.path.join(selected_root, basename)
 
+    @staticmethod
+    def resolve_final_url(url, timeout=8):
+        try:
+            req = Request(url, method='HEAD', headers={'User-Agent': 'm3u-dump/1.2'})
+            with urlopen(req, timeout=timeout) as resp:
+                return resp.geturl()
+        except Exception:
+            try:
+                req = Request(url, method='GET', headers={'User-Agent': 'm3u-dump/1.2'})
+                with urlopen(req, timeout=timeout) as resp:
+                    return resp.geturl()
+            except Exception:
+                return url
+
+    def capture_url_origins(self, playlist_lines):
+        resolve_final = self.args.get('resolve_url_final', True)
+        for line in playlist_lines:
+            if self.is_comment(line) or not self.is_url(line):
+                continue
+
+            self.report['url_entries_detected'] += 1
+            final_url = self.resolve_final_url(line) if resolve_final else line
+            parsed = urlparse(final_url)
+            origin_server = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else ''
+
+            item = {
+                'original_url': line,
+                'final_url': final_url,
+                'origin_server': origin_server,
+            }
+            self.report['origin_links'].append(item)
+            self.report['url_origin_saved'] += 1
+
     def fix_playlist(self, search_path_files, playlist_lines):
         new_playlist_lines = []
         strategy = self.args.get('collision_strategy', 'path-score')
 
         for line in playlist_lines:
             if M3uDump.is_comment(line):
+                new_playlist_lines.append(line)
+                continue
+
+            if self.is_url(line):
                 new_playlist_lines.append(line)
                 continue
 
@@ -141,7 +187,7 @@ class M3uDump:
 
     def copy_music(self, playlist_lines, dump_music_path, dry_run):
         for line in playlist_lines:
-            if M3uDump.is_comment(line):
+            if M3uDump.is_comment(line) or self.is_url(line):
                 continue
             if not os.path.exists(line):
                 log.warning('skip copy, because music file({}) was not found.'.format(line))
@@ -173,6 +219,8 @@ class M3uDump:
                 for line in playlist_lines:
                     if M3uDump.is_comment(line):
                         f.write(line + '\n')
+                    elif M3uDump.is_url(line):
+                        f.write(line + '\n')
                     else:
                         f.write(os.path.basename(line) + '\n')
         else:
@@ -180,6 +228,7 @@ class M3uDump:
 
     def dump_playlist(self, playlist_path):
         playlist_lines = list(M3uDump.parse_playlist(playlist_path))
+        self.capture_url_origins(playlist_lines)
 
         if self.args.get('fix_search_path'):
             search_path_files = M3uDump.get_search_path_files(self.args['fix_search_path'])
@@ -230,6 +279,15 @@ class M3uDump:
                         'selected': row.get('selected', ''),
                     })
             log.info('csv report written: {}'.format(csv_path))
+
+        origin_path = self.args.get('origin_links_file')
+        if origin_path:
+            with open(origin_path, 'w', encoding='utf-8', newline='') as f:
+                writer = csv.DictWriter(f, fieldnames=['original_url', 'final_url', 'origin_server'])
+                writer.writeheader()
+                for row in self.report.get('origin_links', []):
+                    writer.writerow(row)
+            log.info('origin links written: {}'.format(origin_path))
 
     def start(self):
         load_m3u_path = self.args['load_m3u_path']
