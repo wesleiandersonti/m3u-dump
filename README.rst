@@ -21,8 +21,11 @@ OPÇÕES IMPORTANTES
 - ``--playlist-pattern-list <glob>``: pode repetir para múltiplos padrões
 - ``--collision-strategy [first|shortest|path-score]``: resolve arquivos com mesmo nome em múltiplas pastas
 - ``--report-json <arquivo.json>``: gera relatório da execução
+- ``--report-csv <arquivo.csv>``: exporta detalhes da execução em CSV
+- ``--skip-existing / --no-skip-existing``: pula arquivos já existentes no destino
+- ``--link-mode [copy|hardlink|symlink]``: modo de materialização no destino
 
-Exemplo com múltiplos padrões + relatório JSON:
+Exemplo com múltiplos padrões + relatórios + hardlink:
 
 .. code-block:: bash
 
@@ -30,7 +33,10 @@ Exemplo com múltiplos padrões + relatório JSON:
     --playlist-pattern-list "*.m3u" \
     --playlist-pattern-list "*.m3u8" \
     --collision-strategy path-score \
-    --report-json ./report.json
+    --skip-existing \
+    --link-mode hardlink \
+    --report-json ./report.json \
+    --report-csv ./report.csv
 
 DESENVOLVIMENTO
 ---------------

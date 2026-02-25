@@ -29,6 +29,24 @@ from m3u_dump.m3u_dump import M3uDump
     default=None,
     help='Write execution report to a JSON file',
 )
+@click.option(
+    '--report-csv',
+    default=None,
+    help='Write execution details to a CSV file',
+)
+@click.option(
+    '--skip-existing/--no-skip-existing',
+    default=True,
+    show_default=True,
+    help='Skip destination file when it already exists',
+)
+@click.option(
+    '--link-mode',
+    type=click.Choice(['copy', 'hardlink', 'symlink']),
+    default='copy',
+    show_default=True,
+    help='How files are materialized in destination',
+)
 def main(**kwargs):
     """Console script for m3u_dump."""
 
