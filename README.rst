@@ -66,6 +66,26 @@ Gerar instalador (Inno Setup):
 Saída esperada do instalador:
 - ``installer\\m3u-dump-pro-installer.exe``
 
+Build automático no GitHub (instalador final)
+-------------------------------------------
+
+Este repositório já está configurado para gerar o instalador final via GitHub Actions:
+
+- workflow: ``.github/workflows/windows-installer.yml``
+- gera:
+  - ``m3u-dump-pro.exe``
+  - ``m3u-dump-pro-installer.exe``
+
+Como disparar:
+
+1. Crie e envie uma tag (exemplo ``v1.1.1``)
+2. O workflow roda no Windows e publica os arquivos na Release da tag
+
+.. code-block:: bash
+
+  git tag v1.1.1
+  git push origin v1.1.1
+
 DESENVOLVIMENTO
 ---------------
 
